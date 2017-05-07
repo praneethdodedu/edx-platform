@@ -1,14 +1,22 @@
-"""
-Specialized models for oauth_dispatch djangoapp
-"""
-
 from datetime import datetime
+from django.conf import settings
 
 from django.db import models
-from oauth2_provider.settings import oauth2_settings
+from oauth2_provider.models import AbstractApplication
 from pytz import utc
 
 
+class Application(AbstractApplication):
+    """ OAuth application model.
+
+    Allows for declared authorization grant type in addition to the client credentials grant.
+    """
+
+    def allows_grant_type(self, *grant_types):
+        return bool({self.authorization_grant_type, self.GRANT_CLIENT_CREDENTIALS}.intersection(set(grant_types)))
+
+
+# TODO Deprecate this model, and add a boolean to the Application model
 class RestrictedApplication(models.Model):
     """
     This model lists which django-oauth-toolkit Applications are considered 'restricted'
@@ -18,7 +26,7 @@ class RestrictedApplication(models.Model):
     so that they cannot be used to call into APIs.
     """
 
-    application = models.ForeignKey(oauth2_settings.APPLICATION_MODEL, null=False)
+    application = models.ForeignKey(settings.OAUTH2_PROVIDER_APPLICATION_MODEL, null=False)
 
     def __unicode__(self):
         """

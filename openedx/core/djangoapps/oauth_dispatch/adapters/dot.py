@@ -1,8 +1,9 @@
 """
 Adapter to isolate django-oauth-toolkit dependencies
 """
+from oauth2_provider.models import get_application_model, AccessToken
 
-from oauth2_provider import models
+Application = get_application_model()
 
 
 class DOTAdapter(object):
@@ -12,20 +13,22 @@ class DOTAdapter(object):
 
     backend = object()
 
-    def create_confidential_client(self,
-                                   name,
-                                   user,
-                                   redirect_uri,
-                                   client_id=None,
-                                   authorization_grant_type=models.Application.GRANT_AUTHORIZATION_CODE):
+    def create_confidential_client(
+        self,
+        name,
+        user,
+        redirect_uri,
+        client_id=None,
+        authorization_grant_type=Application.GRANT_AUTHORIZATION_CODE
+    ):
         """
         Create an oauth client application that is confidential.
         """
-        return models.Application.objects.create(
+        return Application.objects.create(
             name=name,
             user=user,
             client_id=client_id,
-            client_type=models.Application.CLIENT_CONFIDENTIAL,
+            client_type=Application.CLIENT_CONFIDENTIAL,
             authorization_grant_type=authorization_grant_type,
             redirect_uris=redirect_uri,
         )
@@ -34,12 +37,12 @@ class DOTAdapter(object):
         """
         Create an oauth client application that is public.
         """
-        return models.Application.objects.create(
+        return Application.objects.create(
             name=name,
             user=user,
             client_id=client_id,
-            client_type=models.Application.CLIENT_PUBLIC,
-            authorization_grant_type=models.Application.GRANT_PASSWORD,
+            client_type=Application.CLIENT_PUBLIC,
+            authorization_grant_type=Application.GRANT_PASSWORD,
             redirect_uris=redirect_uri,
         )
 
@@ -49,7 +52,7 @@ class DOTAdapter(object):
 
         Wraps django's queryset.get() method.
         """
-        return models.Application.objects.get(**filters)
+        return Application.objects.get(**filters)
 
     def get_client_for_token(self, token):
         """
@@ -61,7 +64,7 @@ class DOTAdapter(object):
         """
         Given a token string, return the matching AccessToken object.
         """
-        return models.AccessToken.objects.get(token=token_string)
+        return AccessToken.objects.get(token=token_string)
 
     def normalize_scopes(self, scopes):
         """

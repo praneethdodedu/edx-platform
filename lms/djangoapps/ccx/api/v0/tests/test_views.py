@@ -3,7 +3,6 @@ Tests for the CCX REST APIs.
 """
 import json
 import math
-import pytz
 import string
 import urllib
 import urlparse
@@ -12,6 +11,8 @@ from itertools import izip
 
 import ddt
 import mock
+import pytz
+from ccx_keys.locator import CCXLocator
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.urlresolvers import (
@@ -21,6 +22,7 @@ from django.core.urlresolvers import (
 )
 from nose.plugins.attrib import attr
 from oauth2_provider import models as dot_models
+from opaque_keys.edx.keys import CourseKey
 from provider.constants import CONFIDENTIAL
 from provider.oauth2.models import (
     Client,
@@ -30,27 +32,24 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from courseware import courses
-from ccx_keys.locator import CCXLocator
-from student.models import CourseEnrollment
-from student.tests.factories import UserFactory
+from lms.djangoapps.ccx.api.v0 import views
+from lms.djangoapps.ccx.models import CcxFieldOverride, CustomCourseForEdX
+from lms.djangoapps.ccx.overrides import override_field_for_ccx
+from lms.djangoapps.ccx.tests.utils import CcxTestCase
+from lms.djangoapps.ccx.utils import ccx_course as ccx_course_cm
+from lms.djangoapps.ccx.utils import get_course_chapters
 from lms.djangoapps.instructor.access import allow_access, list_with_level
 from lms.djangoapps.instructor.enrollment import (
     enroll_email,
     get_email_params,
 )
-from lms.djangoapps.ccx.api.v0 import views
-from lms.djangoapps.ccx.models import CcxFieldOverride, CustomCourseForEdX
-from lms.djangoapps.ccx.overrides import override_field_for_ccx
-from lms.djangoapps.ccx.tests.utils import CcxTestCase
-from lms.djangoapps.ccx.utils import get_course_chapters
-from lms.djangoapps.ccx.utils import ccx_course as ccx_course_cm
-from opaque_keys.edx.keys import CourseKey
+from student.models import CourseEnrollment
 from student.roles import (
     CourseInstructorRole,
     CourseCcxCoachRole,
     CourseStaffRole,
 )
-from student.tests.factories import AdminFactory
+from student.tests.factories import AdminFactory, UserFactory
 
 USER_PASSWORD = 'test'
 AUTH_ATTRS = ('auth', 'auth_header_oauth2_provider')
@@ -60,6 +59,7 @@ class CcxRestApiTest(CcxTestCase, APITestCase):
     """
     Base class with common methods to be used in the test classes of this module
     """
+
     @classmethod
     def setUpClass(cls):
         super(CcxRestApiTest, cls).setUpClass()
@@ -132,7 +132,7 @@ class CcxRestApiTest(CcxTestCase, APITestCase):
         )
 
         # create an oauth2 provider client app entry
-        app_client_oauth2_provider = dot_models.Application.objects.create(
+        app_client_oauth2_provider = dot_models.get_application_model().objects.create(
             name='test client 2',
             user=user,
             client_type='confidential',
