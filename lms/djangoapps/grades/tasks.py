@@ -10,12 +10,14 @@ from django.db.utils import DatabaseError
 from logging import getLogger
 
 log = getLogger(__name__)
+import six
 
 from celery_utils.logged_task import LoggedTask
 from celery_utils.persist_on_failure import PersistOnFailureTask
 from courseware.model_data import get_score
 from lms.djangoapps.course_blocks.api import get_course_blocks
 from lms.djangoapps.courseware import courses
+from lms.djangoapps.grades.config.models import ComputeGradesSetting
 from opaque_keys.edx.keys import CourseKey, UsageKey
 from opaque_keys.edx.locator import CourseLocator
 from openedx.core.djangoapps.monitoring_utils import (
@@ -52,6 +54,27 @@ class _BaseTask(PersistOnFailureTask, LoggedTask):  # pylint: disable=abstract-m
     Include persistence features, as well as logging of task invocation.
     """
     abstract = True
+
+
+@task(base=_BaseTask)
+def compute_all_grades_for_course(**kwargs):
+    """
+    Compute grades for all students in the specified course.
+    Kicks off a series of compute_grades_for_course_v2 tasks
+    to cover all of the students in the course.
+    """
+    from_settings = kwargs.pop('from_settings', True)
+    course_key = kwargs.pop('course_key')
+    enrollment_count = CourseEnrollment.objects.filter(course_id=course_key).count()
+
+    if from_settings is False:
+        batch_size = kwargs.pop('batch_size', 100)
+    else:
+        batch_size = ComputeGradesSetting.current().batch_size
+
+    for offset in six.moves.range(0, enrollment_count, batch_size):
+        task_options = {'course_key': six.text_type(course_key), 'offset': offset, 'batch_size': batch_size}
+        compute_grades_for_course_v2.apply_async(kwargs=kwargs, **task_options)
 
 
 @task(base=_BaseTask, bind=True, default_retry_delay=30, max_retries=1)

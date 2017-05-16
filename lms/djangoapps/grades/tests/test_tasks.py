@@ -31,6 +31,7 @@ from lms.djangoapps.grades.constants import ScoreDatabaseTableEnum
 from lms.djangoapps.grades.models import PersistentCourseGrade, PersistentSubsectionGrade
 from lms.djangoapps.grades.signals.signals import PROBLEM_WEIGHTED_SCORE_CHANGED
 from lms.djangoapps.grades.tasks import (
+    compute_all_grades_for_course,
     compute_grades_for_course_v2,
     recalculate_subsection_grade_v3,
     RECALCULATE_GRADE_DELAY
@@ -417,3 +418,15 @@ class ComputeGradesForCourseTest(HasCourseWithProblemsMixin, ModuleStoreTestCase
                     batch_size=batch_size,
                     offset=6,
                 )
+
+    @ddt.data(*xrange(1, 12, 3))
+    def test_compute_all_grades_for_course(self, batch_size):
+        """
+        Ensures that known errors are not logged before a retry.
+        """
+        self.set_up_course()
+        result = compute_all_grades_for_course.delay(
+            course_key=six.text_type(self.course.id),
+            batch_size=batch_size,
+        )
+        self.assertTrue(result.successful)
