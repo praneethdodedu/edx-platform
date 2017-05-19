@@ -32,7 +32,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from capa.tests.response_xml_factory import MultipleChoiceResponseXMLFactory
 from common.test.acceptance.fixtures.course import XBlockFixtureDesc
 from common.test.acceptance.pages.common import BASE_URL
-from common.test.acceptance.pages.studio.auto_auth import AutoAuthPage
+from common.test.acceptance.pages.common.auto_auth import AutoAuthPage
 from openedx.core.lib.partitions.partitions import UserPartition
 from openedx.core.lib.tests.assertions.events import EventMatchTolerates, assert_event_matches, is_matching_event
 from openedx.core.release import RELEASE_LINE, doc_version
