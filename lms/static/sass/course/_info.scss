@@ -224,7 +224,6 @@ div.info-wrapper {
           text-transform: none;
           background: url('#{$static-path}/images/calendar-icon.png') 0 center no-repeat;
           @include padding-left($baseline);
-          @include float(left);
         }
       
 

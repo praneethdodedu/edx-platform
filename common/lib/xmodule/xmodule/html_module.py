@@ -446,10 +446,8 @@ class CourseInfoModule(CourseInfoFields, HtmlModuleMixin):
                 return self.data.replace("%%USER_ID%%", self.system.anonymous_student_id)
             return self.data
         else:
-            course_updates = self.ordered_updates()
             context = {
-                'visible_updates': course_updates[:3],
-                'hidden_updates': course_updates[3:],
+                'updates': self.ordered_updates()
             }
             return self.system.render_template("{0}/course_updates.html".format(self.TEMPLATE_DIR), context)
 

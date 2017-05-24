@@ -171,3 +171,21 @@
     }
   }
 }
+
+// Course Updates Page
+div.course-updates {
+  div.all-updates {
+      article.updates-article {
+        margin: 10px 0px;
+        .date {
+          font-size: 14px;
+          font-weight: 300;
+        }
+        .end-line {
+          background-color: #eed;
+          height: 1px;
+          margin-top: 10px;
+        }
+      }
+  }
+}
