@@ -73,7 +73,13 @@ def compute_all_grades_for_course(**kwargs):
         batch_size = ComputeGradesSetting.current().batch_size
 
     for offset in six.moves.range(0, enrollment_count, batch_size):
-        task_options = {'course_key': six.text_type(course_key), 'offset': offset, 'batch_size': batch_size}
+        task_options = {
+            'course_key': six.text_type(course_key),
+            'offset': offset,
+            'batch_size': batch_size,
+            'event_transaction_id': kwargs.get('event_transaction_id', None),
+            'event_transaction_type': kwargs.get('event_transaction_type', None),
+        }
         compute_grades_for_course_v2.apply_async(kwargs=kwargs, **task_options)
 
 
@@ -97,6 +103,12 @@ def compute_grades_for_course_v2(self, **kwargs):
         waffle switch.  If false or not provided, use the global value of
         the ESTIMATE_FIRST_ATTEMPTED waffle switch.
     """
+    if 'event_transaction_id' in kwargs:
+        set_event_transaction_id(kwargs['event_transaction_id'])
+
+    if 'event_transaction_type' in kwargs:
+        set_event_transaction_type(kwargs['event_transaction_type'])
+
     course_key = kwargs.pop('course_key')
     offset = kwargs.pop('offset')
     batch_size = kwargs.pop('batch_size')

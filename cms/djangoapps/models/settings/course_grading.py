@@ -1,8 +1,14 @@
+from base64 import b64encode
 from datetime import timedelta
+from hashlib import sha1
+import json
 
 from contentstore.signals.signals import GRADING_POLICY_CHANGED
+from eventtracking import tracker
+from track.event_transaction_utils import create_new_event_transaction_id, set_event_transaction_type
 from xmodule.modulestore.django import modulestore
 
+GRADING_POLICY_CHANGED_EVENT_TYPE = 'edx.grades.grading_policy_changed'
 
 class CourseGradingModel(object):
     """
@@ -66,7 +72,7 @@ class CourseGradingModel(object):
         CourseGradingModel.update_grace_period_from_json(course_key, jsondict['grace_period'], user)
 
         CourseGradingModel.update_minimum_grade_credit_from_json(course_key, jsondict['minimum_grade_credit'], user)
-
+        _emit_grading_event(course_key, user.id)
         GRADING_POLICY_CHANGED.send(sender=CourseGradingModel, user_id=user.id, course_id=course_key)
 
         return CourseGradingModel.fetch(course_key)
@@ -89,7 +95,7 @@ class CourseGradingModel(object):
             descriptor.raw_grader.append(grader)
 
         modulestore().update_item(descriptor, user.id)
-
+        _emit_grading_event(course_key, user.id)
         GRADING_POLICY_CHANGED.send(sender=CourseGradingModel, user_id=user.id, course_id=course_key)
 
         return CourseGradingModel.jsonize_grader(index, descriptor.raw_grader[index])
@@ -104,7 +110,8 @@ class CourseGradingModel(object):
         descriptor.grade_cutoffs = cutoffs
 
         modulestore().update_item(descriptor, user.id)
-
+        _emit_grading_event(course_key, user.id)
+        GRADING_POLICY_CHANGED.send(sender=CourseGradingModel, user_id=user.id, course_id=course_key)
         return cutoffs
 
     @staticmethod
@@ -160,7 +167,7 @@ class CourseGradingModel(object):
             descriptor.raw_grader = descriptor.raw_grader
 
         modulestore().update_item(descriptor, user.id)
-
+        _emit_grading_event(course_key, user.id)
         GRADING_POLICY_CHANGED.send(sender=CourseGradingModel, user_id=user.id, course_id=course_key)
 
     @staticmethod
@@ -192,7 +199,7 @@ class CourseGradingModel(object):
             del descriptor.graded
 
         modulestore().update_item(descriptor, user.id)
-
+        _emit_grading_event(descriptor.location.course_key, user.id)
         GRADING_POLICY_CHANGED.send(
             sender=CourseGradingModel,
             user_id=user.id,
@@ -253,3 +260,26 @@ class CourseGradingModel(object):
             "short_label": grader.get('short_label', ""),
             "weight": grader.get('weight', 0) * 100,
         }
+
+
+def _emit_grading_event(course_key, user_id):
+    name = GRADING_POLICY_CHANGED_EVENT_TYPE
+    course = modulestore().get_course(course_key)
+
+    data = {
+        "course_id": unicode(course_key),
+        "user_id": unicode(user_id),
+        "grading_policy_hash": unicode(hash_grading_policy(course.grading_policy)),
+        "event_transaction_id": unicode(create_new_event_transaction_id()),
+        "event_transaction_type": GRADING_POLICY_CHANGED_EVENT_TYPE,
+    }
+    tracker.emit(name, data)
+
+
+def hash_grading_policy(grading_policy):
+    ordered_policy = json.dumps(
+        grading_policy,
+        separators=(',', ':'),  # Remove spaces from separators for more compact representation
+        sort_keys=True,
+    )
+    return b64encode(sha1(ordered_policy).digest())
