@@ -520,7 +520,6 @@ class CourseGradingTest(CourseTestCase):
     def _grading_policy_hash_for_course(self):
         return hash_grading_policy(modulestore().get_course(self.course.id).grading_policy)
 
-
     @mock.patch('track.event_transaction_utils.uuid4')
     @mock.patch('models.settings.course_grading.tracker')
     @mock.patch('contentstore.signals.signals.GRADING_POLICY_CHANGED.send')
@@ -532,7 +531,7 @@ class CourseGradingTest(CourseTestCase):
         )
         self.assertDictEqual(test_grader.graders[1], altered_grader, "Noop update")
         grading_policy_1 = self._grading_policy_hash_for_course()
-        
+
         test_grader.graders[1]['min_count'] = test_grader.graders[1].get('min_count') + 2
         altered_grader = CourseGradingModel.update_grader_from_json(
             self.course.id, test_grader.graders[1], self.user)
@@ -585,7 +584,6 @@ class CourseGradingTest(CourseTestCase):
                 }
             ),
         ])
-
 
     @mock.patch('track.event_transaction_utils.uuid4')
     @mock.patch('models.settings.course_grading.tracker')

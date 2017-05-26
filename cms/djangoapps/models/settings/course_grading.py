@@ -10,6 +10,7 @@ from xmodule.modulestore.django import modulestore
 
 GRADING_POLICY_CHANGED_EVENT_TYPE = 'edx.grades.grading_policy_changed'
 
+
 class CourseGradingModel(object):
     """
     Basically a DAO and Model combo for CRUD operations pertaining to grading policy.
