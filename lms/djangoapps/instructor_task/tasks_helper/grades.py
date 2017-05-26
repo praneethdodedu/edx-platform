@@ -208,7 +208,8 @@ class CourseGradeReport(object):
             [u'Experiment Group ({})'.format(partition.name) for partition in context.course_experiments] +
             (['Team Name'] if context.teams_enabled else []) +
             ['Enrollment Track', 'Verification Status'] +
-            ['Certificate Eligible', 'Certificate Delivered', 'Certificate Type']
+            ['Certificate Eligible', 'Certificate Delivered', 'Certificate Type'] +
+            ['Enrollment Status']
         )
 
     def _error_headers(self):
@@ -372,6 +373,19 @@ class CourseGradeReport(object):
         )
         return certificate_info
 
+    def _enrollment_status(self, user, context):
+        """
+        Returns a list of a string that indicates whether a user
+        is actively enrolled in a course.
+        """
+        if not getattr(self, '_enrollment_status_by_user', None):
+            self._enrollment_status_by_user = dict(
+                CourseEnrollment.objects.values_list('user_id', 'is_active').filter(course_id=context.course_id)
+            )
+        if self._enrollment_status_by_user.get(user.id):
+            return ['enrolled']
+        return ['unenrolled']
+
     def _rows_for_users(self, context, users):
         """
         Returns a list of rows for the given users for this report.
@@ -397,7 +411,8 @@ class CourseGradeReport(object):
                         self._user_experiment_group_names(user, context) +
                         self._user_team_names(user, bulk_context.teams) +
                         self._user_verification_mode(user, context, bulk_context.enrollments) +
-                        self._user_certificate_info(user, context, course_grade, bulk_context.certs)
+                        self._user_certificate_info(user, context, course_grade, bulk_context.certs) +
+                        self._enrollment_status(user, context)
                     )
             return success_rows, error_rows
 

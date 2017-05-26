@@ -387,9 +387,10 @@ class TestInstructorGradeReport(InstructorGradeReportTestCase):
 
         RequestCache.clear_request_cache()
 
+        expected_query_count = 42
         with patch('lms.djangoapps.instructor_task.tasks_helper.runner._get_current_task'):
             with check_mongo_calls(mongo_count):
-                with self.assertNumQueries(41):
+                with self.assertNumQueries(expected_query_count):
                     CourseGradeReport.generate(None, None, course.id, None, 'graded')
 
     def test_inactive_enrollments(self):
