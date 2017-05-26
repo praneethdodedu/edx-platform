@@ -63,17 +63,11 @@ def compute_all_grades_for_course(**kwargs):
     Kicks off a series of compute_grades_for_course_v2 tasks
     to cover all of the students in the course.
     """
-    from_settings = kwargs.pop('from_settings', True)
-    course_key = kwargs.pop('course_key')
-    enrollment_count = CourseEnrollment.objects.filter(course_id=course_key).count()
-
-    if from_settings is False:
-        batch_size = kwargs.pop('batch_size', 100)
-    else:
-        batch_size = ComputeGradesSetting.current().batch_size
-
-    for offset in six.moves.range(0, enrollment_count, batch_size):
-        task_options = {'course_key': six.text_type(course_key), 'offset': offset, 'batch_size': batch_size}
+    for course_key, offset, batch_size in _course_task_args(
+        course_key=kwargs.pop('course_key'),
+        kwargs=kwargs
+    ):
+        task_options = {'course_key': course_key, 'offset': offset, 'batch_size': batch_size}
         compute_grades_for_course_v2.apply_async(kwargs=kwargs, **task_options)
 
 
@@ -273,3 +267,21 @@ def _update_subsection_grades(course_key, scored_block_usage_key, only_if_higher
                     user=student,
                     subsection_grade=subsection_grade,
                 )
+
+
+def _course_task_args(course_key, **kwargs):
+    """
+    Helper function to generate tuples batched course task args based on course enrollment numbers.
+    """
+    from_settings = kwargs.pop('from_settings', True)
+    enrollment_count = CourseEnrollment.objects.filter(course_id=course_key).count()
+    if enrollment_count == 0:
+        log.warning("No enrollments found for {}".format(course_key))
+
+    if from_settings is False:
+        batch_size = kwargs.pop('batch_size', 100)
+    else:
+        batch_size = ComputeGradesSetting.current().batch_size
+
+    for offset in six.moves.range(0, enrollment_count, batch_size):
+        yield (six.text_type(course_key), offset, batch_size)
