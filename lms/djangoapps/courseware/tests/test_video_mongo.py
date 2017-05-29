@@ -1108,8 +1108,9 @@ class TestVideoDescriptorInitialization(BaseTestXmodule):
         """
         with patch('xmodule.video_module.video_module.edxval_api.get_urls_for_profiles') as get_urls_for_profiles:
             get_urls_for_profiles.return_value = val_video_encodings
-            video_xml = '<video display_name="Video" download_video="true" edx_video_id="12345-67890">[]</video>'
-            self.initialize_module(data=video_xml)
+            self.initialize_module(
+                data='<video display_name="Video" download_video="true" edx_video_id="12345-67890">[]</video>'
+            )
             context = self.item_descriptor.get_context()
             self.assertEqual(context['transcripts_basic_tab_metadata']['video_url']['value'], video_url)
 
